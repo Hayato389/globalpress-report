@@ -9,7 +9,9 @@ interface SiteRow {
 }
 
 export default function Home() {
-  const [title, setTitle] = useState('Digital Marketing Reimagined: UZU Advertising Launches All-Paid, Fast-Payout Influencer Matching Platform')
+  const [pressUrl, setPressUrl] = useState('')
+  const [urlLoading, setUrlLoading] = useState(false)
+  const [title, setTitle] = useState('')
   const [country, setCountry] = useState('アメリカ / 英語')
   const [category, setCategory] = useState('デジタル')
   const [date, setDate] = useState('')
@@ -18,11 +20,28 @@ export default function Home() {
   const [screenshotPreviews, setScreenshotPreviews] = useState<{p1:string,p2:string,p3:string}>({p1:'',p2:'',p3:''})
   const [loading, setLoading] = useState(false)
   const [csvFileName, setCsvFileName] = useState('')
-  const [step, setStep] = useState(1)
   const csvRef = useRef<HTMLInputElement>(null)
   const p1Ref = useRef<HTMLInputElement>(null)
   const p2Ref = useRef<HTMLInputElement>(null)
   const p3Ref = useRef<HTMLInputElement>(null)
+
+  const handleFetchMeta = async () => {
+    if (!pressUrl) return
+    setUrlLoading(true)
+    try {
+      const res = await fetch('/api/fetch-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: pressUrl })
+      })
+      const data = await res.json()
+      if (data.title) setTitle(data.title)
+    } catch {
+      alert('URLからの取得に失敗しました。手動で入力してください。')
+    } finally {
+      setUrlLoading(false)
+    }
+  }
 
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -36,12 +55,7 @@ export default function Home() {
         const parts = line.split(',')
         const name = parts[0]?.trim() || ''
         const url = parts.slice(1).join(',').trim() || ''
-        return {
-          name,
-          url,
-          mediaType: i < 8 ? '大規模メディア' : '中規模メディア',
-          sessions: '100,000以上／月'
-        }
+        return { name, url, mediaType: i < 8 ? '大規模メディア' : '中規模メディア', sessions: '100,000以上／月' }
       })
       setSites(parsed)
     }
@@ -77,7 +91,7 @@ export default function Home() {
       a.href = url
       a.download = `GlobalPress_Report_${date || 'report'}.docx`
       a.click()
-    } catch (err) {
+    } catch {
       alert('エラーが発生しました。もう一度お試しください。')
     } finally {
       setLoading(false)
@@ -88,7 +102,6 @@ export default function Home() {
     width: '100%', padding: '10px 14px', borderRadius: 8,
     border: '1.5px solid #d1d5db', fontSize: 14, fontFamily: 'inherit',
     background: '#fafafa', outline: 'none', boxSizing: 'border-box',
-    transition: 'border 0.2s',
   }
   const labelStyle: React.CSSProperties = {
     display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6
@@ -96,19 +109,42 @@ export default function Home() {
 
   return (
     <div style={{minHeight:'100vh', background:'linear-gradient(135deg,#f0f4ff 0%,#fafbff 50%,#f0f7ff 100%)', fontFamily:"'Hiragino Sans','Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif"}}>
-      {/* Header */}
       <div style={{background:'#1e3a5f', padding:'20px 40px', display:'flex', alignItems:'center', gap:16, boxShadow:'0 2px 12px rgba(0,0,0,0.15)'}}>
         <div style={{width:40,height:40,borderRadius:10,background:'linear-gradient(135deg,#4f9cf9,#a78bfa)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>📰</div>
         <div>
-          <div style={{color:'white',fontWeight:700,fontSize:20,letterSpacing:'-0.3px'}}>Global Press</div>
+          <div style={{color:'white',fontWeight:700,fontSize:20}}>Global Press</div>
           <div style={{color:'#93c5fd',fontSize:12}}>レポート自動生成システム</div>
         </div>
       </div>
 
       <div style={{maxWidth:800, margin:'40px auto', padding:'0 24px'}}>
 
-        {/* Step 1: 配信概要 */}
-        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08),0 4px 24px rgba(0,0,0,0.04)',border:'1px solid #e5e7eb'}}>
+        {/* URL入力 */}
+        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08)',border:'1px solid #e5e7eb'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14}}>0</div>
+            <h2 style={{margin:0,fontSize:18,fontWeight:700,color:'#1e3a5f'}}>プレスリリースURL</h2>
+          </div>
+          <p style={{color:'#6b7280',fontSize:13,marginBottom:16}}>URLを入力すると記事タイトルを自動取得します。</p>
+          <div style={{display:'flex',gap:8}}>
+            <input
+              style={{...inputStyle, flex:1}}
+              value={pressUrl}
+              onChange={e=>setPressUrl(e.target.value)}
+              placeholder="https://..."
+            />
+            <button
+              onClick={handleFetchMeta}
+              disabled={urlLoading || !pressUrl}
+              style={{padding:'10px 20px',borderRadius:8,border:'none',background:urlLoading||!pressUrl?'#e5e7eb':'#1e3a5f',color:urlLoading||!pressUrl?'#9ca3af':'white',fontWeight:600,fontSize:14,cursor:urlLoading||!pressUrl?'not-allowed':'pointer',whiteSpace:'nowrap'}}
+            >
+              {urlLoading ? '取得中...' : '自動取得'}
+            </button>
+          </div>
+        </div>
+
+        {/* 配信概要 */}
+        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08)',border:'1px solid #e5e7eb'}}>
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
             <div style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14}}>1</div>
             <h2 style={{margin:0,fontSize:18,fontWeight:700,color:'#1e3a5f'}}>配信概要</h2>
@@ -116,16 +152,16 @@ export default function Home() {
           <div style={{display:'grid',gap:16}}>
             <div>
               <label style={labelStyle}>記事タイトル</label>
-              <input style={inputStyle} value={title} onChange={e=>setTitle(e.target.value)} placeholder="プレスリリースのタイトルを入力" />
+              <input style={inputStyle} value={title} onChange={e=>setTitle(e.target.value)} placeholder="URLから自動取得、または手動入力" />
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
               <div>
                 <label style={labelStyle}>配信国 / 配信言語</label>
-                <input style={inputStyle} value={country} onChange={e=>setCountry(e.target.value)} placeholder="例：アメリカ / 英語" />
+                <input style={inputStyle} value={country} onChange={e=>setCountry(e.target.value)} />
               </div>
               <div>
                 <label style={labelStyle}>配信カテゴリー</label>
-                <input style={inputStyle} value={category} onChange={e=>setCategory(e.target.value)} placeholder="例：デジタル" />
+                <input style={inputStyle} value={category} onChange={e=>setCategory(e.target.value)} />
               </div>
             </div>
             <div>
@@ -135,24 +171,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Step 2: 掲載サイト */}
-        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08),0 4px 24px rgba(0,0,0,0.04)',border:'1px solid #e5e7eb'}}>
+        {/* CSVアップロード */}
+        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08)',border:'1px solid #e5e7eb'}}>
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
             <div style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14}}>2</div>
             <h2 style={{margin:0,fontSize:18,fontWeight:700,color:'#1e3a5f'}}>掲載サイト（CSVアップロード）</h2>
           </div>
-          <p style={{color:'#6b7280',fontSize:13,marginBottom:20,marginTop:4}}>EIN Presswireから取得したCSVファイルをアップロードしてください。上位10件が自動で選択されます。</p>
-          
-          <div
-            onClick={()=>csvRef.current?.click()}
-            style={{border:'2px dashed #cbd5e1',borderRadius:12,padding:'28px 20px',textAlign:'center',cursor:'pointer',background:'#f8fafc',transition:'all 0.2s'}}
-          >
+          <p style={{color:'#6b7280',fontSize:13,marginBottom:20}}>EIN Presswireから取得したCSVファイルをアップロードしてください。</p>
+          <div onClick={()=>csvRef.current?.click()} style={{border:'2px dashed #cbd5e1',borderRadius:12,padding:'28px 20px',textAlign:'center',cursor:'pointer',background:'#f8fafc'}}>
             <div style={{fontSize:32,marginBottom:8}}>📄</div>
             <div style={{fontWeight:600,color:'#374151',fontSize:14}}>{csvFileName || 'CSVファイルをクリックして選択'}</div>
             <div style={{color:'#9ca3af',fontSize:12,marginTop:4}}>.csv形式</div>
             <input ref={csvRef} type="file" accept=".csv" style={{display:'none'}} onChange={handleCSV} />
           </div>
-
           {sites.length > 0 && (
             <div style={{marginTop:16,borderRadius:10,overflow:'hidden',border:'1px solid #e5e7eb'}}>
               <div style={{background:'#1e3a5f',color:'white',padding:'8px 16px',fontSize:12,fontWeight:600,display:'grid',gridTemplateColumns:'40px 1fr 80px'}}>
@@ -169,31 +200,23 @@ export default function Home() {
           )}
         </div>
 
-        {/* Step 3: スクリーンショット */}
-        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08),0 4px 24px rgba(0,0,0,0.04)',border:'1px solid #e5e7eb'}}>
+        {/* スクリーンショット */}
+        <div style={{background:'white',borderRadius:16,padding:32,marginBottom:24,boxShadow:'0 1px 3px rgba(0,0,0,0.08)',border:'1px solid #e5e7eb'}}>
           <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
             <div style={{width:32,height:32,borderRadius:'50%',background:'#1e3a5f',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14}}>3</div>
-            <h2 style={{margin:0,fontSize:18,fontWeight:700,color:'#1e3a5f'}}>スクリーンショット（配信現地からの見え方）</h2>
+            <h2 style={{margin:0,fontSize:18,fontWeight:700,color:'#1e3a5f'}}>スクリーンショット</h2>
           </div>
-          <p style={{color:'#6b7280',fontSize:13,marginBottom:20,marginTop:4}}>アメリカ・英語設定でのGoogle検索結果画像をアップロードしてください。</p>
-
+          <p style={{color:'#6b7280',fontSize:13,marginBottom:20}}>アメリカ・英語設定でのGoogle検索結果画像をアップロードしてください。</p>
           {(['p1','p2','p3'] as const).map((key, i) => {
-            const labels = [
-              'パターン①：プレスリリースタイトルで検索',
-              'パターン②：サービス名「UZU Advertising」で検索',
-              'パターン③：会社名「APOC Co., Ltd.」で検索'
-            ]
+            const labels = ['パターン①：プレスリリースタイトルで検索','パターン②：サービス名で検索','パターン③：会社名で検索']
             const refs = [p1Ref, p2Ref, p3Ref]
             return (
               <div key={key} style={{marginBottom:16}}>
                 <label style={{...labelStyle,marginBottom:8}}>{labels[i]}</label>
-                <div
-                  onClick={()=>refs[i].current?.click()}
-                  style={{border:'2px dashed #cbd5e1',borderRadius:10,padding:screenshotPreviews[key]?0:'20px',textAlign:'center',cursor:'pointer',background:'#f8fafc',overflow:'hidden',minHeight:60,display:'flex',alignItems:'center',justifyContent:'center'}}
-                >
+                <div onClick={()=>refs[i].current?.click()} style={{border:'2px dashed #cbd5e1',borderRadius:10,padding:screenshotPreviews[key]?0:'20px',textAlign:'center',cursor:'pointer',background:'#f8fafc',overflow:'hidden',minHeight:60,display:'flex',alignItems:'center',justifyContent:'center'}}>
                   {screenshotPreviews[key]
                     ? <img src={screenshotPreviews[key]} alt="" style={{width:'100%',maxHeight:300,objectFit:'contain'}} />
-                    : <div style={{color:'#9ca3af',fontSize:13}}>🖼️ クリックして画像を選択（PNG/JPG）</div>
+                    : <div style={{color:'#9ca3af',fontSize:13}}>🖼️ クリックして画像を選択</div>
                   }
                   <input ref={refs[i]} type="file" accept="image/*" style={{display:'none'}} onChange={handleScreenshot(key)} />
                 </div>
@@ -202,22 +225,13 @@ export default function Home() {
           })}
         </div>
 
-        {/* Generate Button */}
         <button
           onClick={handleGenerate}
           disabled={loading || !title || !date}
-          style={{
-            width:'100%', padding:'16px', borderRadius:12, border:'none',
-            background: loading||!title||!date ? '#e5e7eb' : 'linear-gradient(135deg,#1e3a5f,#2563eb)',
-            color: loading||!title||!date ? '#9ca3af' : 'white',
-            fontSize:16, fontWeight:700, cursor: loading||!title||!date?'not-allowed':'pointer',
-            letterSpacing:'0.5px', transition:'all 0.2s',
-            boxShadow: loading||!title||!date?'none':'0 4px 16px rgba(37,99,235,0.35)',
-          }}
+          style={{width:'100%',padding:'16px',borderRadius:12,border:'none',background:loading||!title||!date?'#e5e7eb':'linear-gradient(135deg,#1e3a5f,#2563eb)',color:loading||!title||!date?'#9ca3af':'white',fontSize:16,fontWeight:700,cursor:loading||!title||!date?'not-allowed':'pointer',boxShadow:loading||!title||!date?'none':'0 4px 16px rgba(37,99,235,0.35)'}}
         >
           {loading ? '⏳ レポート生成中...' : '📄 Wordレポートを生成してダウンロード'}
         </button>
-        {(!title||!date) && <p style={{textAlign:'center',color:'#ef4444',fontSize:12,marginTop:8}}>記事タイトルと配信日は必須です</p>}
 
         <div style={{textAlign:'center',color:'#9ca3af',fontSize:12,marginTop:24,marginBottom:40}}>
           Global Press レポート自動生成システム © 2026 APOC Co., Ltd.
