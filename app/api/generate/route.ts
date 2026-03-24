@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (!file) return screenshotPlaceholder(label)
     const buf = await file.arrayBuffer()
     const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
-    const typeMap: Record<string, 'png'|'jpg'|'jpeg'|'gif'|'bmp'> = { png: 'png', jpg: 'jpg', jpeg: 'jpeg', gif: 'gif', bmp: 'bmp' }
+    const typeMap: Record<string, 'png'|'jpg'|'jpeg'|'gif'|'bmp'> = { png: 'png', jpg: 'jpg', jpeg: 'jpg', gif: 'gif', bmp: 'bmp' }
     return new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 60, after: 200 },
